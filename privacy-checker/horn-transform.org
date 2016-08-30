@@ -1,0 +1,76 @@
+#+TITLE: Transformation of a ProVerif program into a Prolog one
+
+Note: this encoding is a naive one. It lets the reader get a feeling
+on how ProVerif tries to reach a secret. The description of the real
+transformation is given in the /Analyzing security protocols with
+secrecy types and logic programs/ article [1].
+
+* Transformation description
+Given the following ProVerif program.
+#+BEGIN_SRC proverif-pv -n -r
+type key.
+fun senc(bitstring, key): bitstring.                      (ref:senc)
+reduc forall m: bitstring, k: key; sdec(k,senc(m,k)) = m. (ref:sdec)
+
+const theSecret: bitstring [private].
+const theKey: key [private].
+const aNonPrivateFact.                                    (ref:fact)
+
+query attacker(theSecret).                                (ref:qry)
+
+free toB, toC: channel.
+process
+  out(toB, senc(theSecret, theKey))       (* process A *) (ref:toB)
+  | (in(toB, theCipherSecret: bitstring); (* process B *)
+     out(toC, theKey))                                    (ref:toC)
+  | in(toC, theKey: key)                  (* process C *)
+#+END_SRC
+
+ProVerif provides three kinds of transformation. The first one will
+encode all the fact and rules that don't involve variables. This the
+case for non private =const= such as line [[(fact)]].
+#+BEGIN_SRC prolog
+attacker(aNonPrivateFact) :- true.
+#+END_SRC
+And also for messages communications. In the transformation of a
+message, all its causal past should appear in the right part of the
+rule. This encoding specifies that an attacker knows the fact sending
+over the channel, only if the causal past have been known. For the
+message send at line [[(toB)]], there is no causal past, so the encoding
+is straightforward.
+#+BEGIN_SRC prolog
+attacker(senc(theSecret, theKey)) :- true.
+#+END_SRC
+In contrast, the message send at line [[(toC)]] has the message from [[(toB)]]
+in its causal past. So the rule should be the following
+#+BEGIN_SRC prolog
+attacker(theKey) :- attacker(senc(theSecret, theKey)).
+#+END_SRC
+
+The next step is the encoding of constructors. The transformation put
+arguments at the right side and the term production at left side of
+the rule. Intuitively, this means that an attacker can construct the
+term if his got enough information. In this rules, arguments should
+appears as horn variables so that the rules matches for any terms. The
+following transforms the =senc= constructor (l.[[(senc)]]).
+#+BEGIN_SRC prolog
+attacker(senc(M,K)) :- attackert(M), attacker(K).
+#+END_SRC
+
+The final step is the encoding of destructors. The transformation is
+equivalent to constructors. Variables in the destructor becomes
+variables in Horn clause. Arguments of the destructor appear in the
+right side of the rule. The following transforms the =sdec= destructor
+(l.[[(sdec)]]).
+#+BEGIN_SRC prolog
+attacker(M) :- attacker(K), attacker(senc(M,K)).
+#+END_SRC
+
+Finally, the =query= that tries to reach the secret (l.[[(qry)]]) is
+modeled has the test of =attacker(theSecret)= predicate.
+
+* Footnotes
+
+[1] M. Abadi and B. Blanchet, "[[http://doi.acm.org/10.1145/503272.503277][Analyzing security protocols with
+secrecy types and logic programs]]", /POPL 2002/, USA, Portland, Jan.
+2002, pp. 33-44.

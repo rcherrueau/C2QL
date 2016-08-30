@@ -1,0 +1,72 @@
+#+TITLE: A Compositional Language of Security Techniques for Information Privacy in the Cloud
+#+AUTHOR: Ronan-Alexandre Cherrueau
+#+EMAIL: Ronan-Alexandre.Cherrueau@inria.fr
+
+/Keywords: Information privacy, cloud computing, fragmentation,
+encryption, client-side computation, DSL/
+
+With the cloud computing, information services are ever-present
+(web-based email client, social networks, file hosting). Such services
+yield personal data that forms the privacy of the client and
+therefore, should be uncompromising on information privacy.
+
+A cloud service can use security techniques to ensure information
+privacy. These techniques protect privacy by converting the client's
+personal data into unintelligible text. But these also cause the loss
+of some functionalities of the service. For instance, a symmetric-key
+cipher protects privacy by converting readable personal data into
+nonsense. However, this causes the loss of computational
+functionalities on this data.
+
+This work claims that a cloud service has to /compose/ security
+techniques to ensure information privacy without the loss of
+functionalities. This claim is based on the study of a personal cloud
+calendar service protected by the composition of three techniques:
+symmetric cipher, vertical data fragmentation and client-side
+computation. This study shows that the composition makes the service
+privacy preserving, but makes the writing overwhelming.
+
+In response, this work offers a new DSL called /C2QL/ (Cryptographic
+Composition for Query Language). C2QL is a query language for the
+writing of cloud services that enforces information privacy with the
+composition of security techniques. This language comes with a set of
+algebraic laws [1] to, systematically, transform a local service
+without protection into its cloud equivalent protected by composition.
+An Idris implementation harnesses the Idris expressive type system to
+ensure the correct composition of security techniques. Furthermore, a
+transformation in ProVerif checks that the service preserves the
+privacy of its client.
+
+This work is described into a thesis [2] (french version only) and
+this repository contains all the material of the thesis. Material
+comes in three separate projects:
+- experimentation :: Source code of the study of the personal cloud
+     calendar service. This study implements a small subset of a
+     personal cloud calendar service. It shows that composing security
+     techniques ensures information privacy without the loss of
+     functionalities. The implementation also measures the execution
+     time of each feature. This shows that composition produces
+     effective programs that are making a best use of the cloud
+     infrastructure.
+- composition-checker :: [[http://www.idris-lang.org/][Idris]] implementation of the C2QL DSL. The
+     implementation harnesses the Idris expressive type system to
+     ensure the correct composition of security techniques. Moreover,
+     C2QL is a so-called tierless programming language. This means it
+     enables the development of a cloud service (including the SaaS
+     application, PaaS database, and client part) as a single
+     monolithic program. For this reason, this project also offers a
+     transformation of the implementation into a π-calculus. This
+     makes the distribution explicit.
+- privacy-checker :: Encoding of the personal cloud calendar service
+     into [[http://prosecco.gforge.inria.fr/personal/bblanche/proverif/][ProVerif]]. This project presents an approach for the
+     analyzing of the preservation of privacy properties in
+     applications made of the composition of cryptographic and
+     fragmentation techniques.
+
+* Footnotes
+[1] R.-A. Cherrueau, R. Douence and M. Südholt, "[[https://rcherrueau.github.io/publications.html][A Language for the
+Composition of Privacy-Enforcement Techniques]]",
+/Trustcom-BigDataSE-ISPA, 2015 IEEE/, Helsinki, Finland, Aug. 2015,
+pp. 1037-1044.
+
+[2] To appear (11-18-2016)

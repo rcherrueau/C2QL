@@ -1,0 +1,162 @@
+(*
+Encoding of the personal calendar as a local application
+Execution: `proverif agenda02-local.pv`
+Expected Output:
+-- Query not attacker_bitstring(cc_da)
+Completing...
+Starting query not attacker_bitstring(cc_da)
+RESULT not attacker_bitstring(cc_da) is true.
+-- Query not attacker_bitstring(cc_n)
+Completing...
+Starting query not attacker_bitstring(cc_n)
+RESULT not attacker_bitstring(cc_n) is true.
+
+The two queries specify that neither the {date,address} nor {name}
+confidentiality constraints have been reach by an attacker.
+
+Note: Sources are in french to follow my thesis encoding. Sorry about
+that.
+*)
+
+set ignoreTypes = false.
+(* set traceDisplay = long. *)
+
+
+(* This section contains the encoding of schema's attributes. *)
+
+(* Attribute of the database *)
+type attribut.
+
+(* unit: attribute without information *)
+const unit: attribut.
+
+(*
+brut: constructor for readable attribute.
+A brut is labelised by its position in the schema
+*)
+fun brut(bitstring): attribut [data].
+
+(* Database attributs *)
+const d: bitstring [private]. (* label for date attribute *)
+const n: bitstring [private]. (* label for name attribute *)
+const a: bitstring [private]. (* label for address attribute *)
+
+(* Confidentiality constraints *)
+const cc_n:  bitstring [private].
+const cc_da: bitstring [private].
+
+query attacker(cc_n).
+query attacker(cc_da).
+
+(*
+Instructions for an attacker: Specify which combination of
+attributes leads to a CC.
+*)
+reduc forall an: attribut;
+confidentiel_da((brut(d), an, brut(a)))       = cc_da.
+
+reduc forall ad: attribut, aa: attribut;
+confidentiel_n((ad, brut(n), aa))             = cc_n.
+
+
+(* The section encodes relational algebra functions as destructor. *)
+
+(*
+Projections:
+- Projection on clear attribute keeps it clear
+- Projection on cypher attribute keeps it ciphered.
+- Attributes outside projection are now unit.
+*)
+reduc forall ad: attribut, an: attribut, aa: attribut;
+      proj((), (ad,an,aa))      = (unit,unit,unit);
+      forall ad: attribut, an: attribut, aa: attribut;
+      proj(d, (ad,an,aa))       = (ad,unit,unit);
+      forall ad: attribut, an: attribut, aa: attribut;
+      proj(n, (ad,an,aa))       = (unit,an,unit);
+      forall ad: attribut, an: attribut, aa: attribut;
+      proj(a, (ad,an,aa))       = (unit,unit,aa);
+      forall ad: attribut, an: attribut, aa: attribut;
+      proj((d,n), (ad,an,aa))   = (ad,an,unit);
+      forall ad: attribut, an: attribut, aa: attribut;
+      proj((d,a), (ad,an,aa))   = (ad,unit,aa);
+      forall ad: attribut, an: attribut, aa: attribut;
+      proj((n,a), (ad,an,aa))   = (unit,an,aa);
+      forall ad: attribut, an: attribut, aa: attribut;
+      proj((d,n,a), (ad,an,aa)) = (ad,an,aa).
+
+(*
+Selections:
+- Selection never changes the schema.
+- Simple selection is applicable on a brut attribute only.
+*)
+reduc forall ad: attribut, an: attribut, aa: attribut;
+      select((), (ad,an,aa))                     = (ad,an,aa);
+      forall an: attribut, aa: attribut;
+      select(d, (brut(d),an,aa))                 = (brut(d), an, aa);
+      forall ad: attribut, aa: attribut;
+      select(n, (ad,brut(n),aa))                 = (ad,brut(n),aa);
+      forall ad: attribut, an: attribut;
+      select(a, (ad,an,brut(a)))                 = (ad,an,brut(a));
+      forall aa: attribut;
+      select((d,n), (brut(d),brut(n),aa))        = (brut(d),brut(n),aa);
+      forall an: attribut;
+      select((d,a), (brut(d),an,brut(a)))        = (brut(d),an,brut(a));
+      forall ad: attribut;
+      select((n,a), (ad,brut(n),brut(a)))        = (ad,brut(n),brut(a));
+      select((d,n,a), (brut(d),brut(n),brut(a))) = (brut(d),brut(n),brut(a)).
+
+(*
+Count:
+- Simple count is applicable on a brut attribute only.
+- Attributes outside count are now unit, except for
+  count(d,n,a) which encode the COUNT\(*\).
+*)
+reduc forall an: attribut, aa: attribut;
+      count(d, (brut(d),an,aa))                 = (brut(d), unit, unit);
+      forall ad: attribut, aa: attribut;
+      count(n, (ad,brut(n),aa))                 = (unit,brut(n),unit);
+      forall ad: attribut, an: attribut;
+      count(a, (ad,an,brut(a)))                 = (unit,unit,brut(a));
+      forall aa: attribut;
+      count((d,n), (brut(d),brut(n),aa))        = (brut(d),brut(n),unit);
+      forall an: attribut;
+      count((d,a), (brut(d),an,brut(a)))        = (brut(d),unit,brut(a));
+      forall ad: attribut;
+      count((n,a), (ad,brut(n),brut(a)))        = (unit,brut(n),brut(a));
+      count((d,n,a), (brut(d),brut(n),brut(a))) = (unit,unit,unit).
+
+
+(* The Calendar application without protection *)
+
+(* ----------------------------------------------- Relation schemas *)
+letfun leSchema = (brut(d), brut(n), brut(a)).
+
+(* ----------------------------------------------- Database Process *)
+(* The [adresse] request.
+   The channel contains the response channel. *)
+free adressesUrl: channel [private].
+let Adresses =
+  in (adressesUrl, to: channel);
+  out(to, proj((n,a), leSchema())).
+
+(* The #rendezvous request.
+   The channel contains the response channel. *)
+free rendezvousUrl: channel [private].
+let Rendezvous =
+  in(rendezvousUrl, to: channel);
+  out(to, count(d, proj(d, select((d,n,a), leSchema())))).
+
+(* The database puts all request in parallel. *)
+let BD = !Adresses | !Rendezvous.
+
+(* ----------------------------------------------- Calendar Process *)
+free toAgenda: channel [private].
+free toAlice: channel [private].
+let Agenda =
+   !out(adressesUrl, toAgenda) |
+   !out(rendezvousUrl, toAgenda) |
+   !(in(toAgenda, res: bitstring); out(toAlice, res)).
+
+(* --------------------------------------------------- Main Process *)
+(* Put all things together *)
+process Agenda | BD

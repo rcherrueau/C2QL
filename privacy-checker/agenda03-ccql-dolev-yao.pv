@@ -1,0 +1,272 @@
+(*
+Encoding of the personal calendar as a online application
+Execution: `proverif agenda03-ccql-dolev-yao.pv`
+Expected Output:
+-- Query not attacker_bitstring(cc_da)
+Completing...
+Starting query not attacker_bitstring(cc_da)
+goal reachable: attacker_bitstring(cc_da)
+...
+The attacker has the message cc_da.
+A trace has been found.
+RESULT not attacker_bitstring(cc_da) is false.
+-- Query not attacker_bitstring(cc_n)
+Completing...
+Starting query not attacker_bitstring(cc_n)
+RESULT not attacker_bitstring(cc_n) is true.
+
+`not attacker_bitstring(cc_da)` specifies that the {date,address}
+privacy constraint is reachable. Therefore, the personal online
+application is not safe regarding to the protection of users'
+informational privacy.
+
+Concretely, checking separately the places query and meetings query
+reveals, as expected, that an attacker cannot violate a privacy
+constraint. However, checking both queries reveals an unexpected
+violation. ProVerif tells us that the places query leaks addresses
+whereas meetings query leaks dates. As a result, an attacker can
+gather then defragment information, hence violate the {date,adress}
+`cc_da` privacy constraint.
+
+This example shows the need of formal means such as ProVerif to check
+the privacy. Checking privacy not only involve queries, but also query
+programs.
+*)
+
+set ignoreTypes = false.
+(* set traceDisplay = long. *)
+
+
+(* This section contains the encoding of schema's attributes. *)
+
+(* Attribute of the database *)
+type attribut.
+
+(* unit: attribute without information *)
+const unit: attribut.
+
+(*
+brut: constructor for readable attribute.
+A brut is labelised by its position in the schema
+*)
+fun brut(bitstring): attribut [data].
+
+(* Database attributs *)
+const d: bitstring [private]. (* label for date attribute *)
+const n: bitstring [private]. (* label for name attribute *)
+const a: bitstring [private]. (* label for address attribute *)
+
+(* Confidentiality constraints *)
+const cc_n:  bitstring [private].
+const cc_da: bitstring [private].
+
+query attacker(cc_n).
+query attacker(cc_da).
+
+(*
+Instructions for an attacker: Specify which combination of
+attributes leads to a CC.
+*)
+reduc forall an: attribut;
+confidentiel_da((brut(d), an, brut(a)))       = cc_da.
+
+reduc forall ad: attribut, aa: attribut;
+confidentiel_n((ad, brut(n), aa))             = cc_n.
+
+
+(* This section contains cryptographic operations *)
+
+(* Symmetric Encryption *)
+type key.
+fun senc(bitstring, key): attribut.
+reduc forall m: bitstring, k: key; sdec(k, senc(m, k)) = brut(m).
+
+(* Defragmentation *)
+reduc forall vd: attribut, vn: attribut, va: attribut;
+defrag((vd,unit,unit), (unit,vn,va)) = (vd,vn,va).
+
+(* Homomorphic Encryption *)
+type pkey.
+fun pk(key): pkey.
+fun henc(bitstring, pkey): attribut.
+reduc forall m: bitstring, k: key; hdec(k, henc(m, pk(k))) = brut(m).
+
+
+(* The section encodes relational algebra functions as destructor. *)
+
+(*
+Projections:
+- Projection on clear attribute keeps it clear
+- Projection on cypher attribute keeps it ciphered.
+- Attributes outside projection are now unit.
+*)
+reduc forall ad: attribut, an: attribut, aa: attribut;
+      proj((), (ad,an,aa))      = (unit,unit,unit);
+      forall ad: attribut, an: attribut, aa: attribut;
+      proj(d, (ad,an,aa))       = (ad,unit,unit);
+      forall ad: attribut, an: attribut, aa: attribut;
+      proj(n, (ad,an,aa))       = (unit,an,unit);
+      forall ad: attribut, an: attribut, aa: attribut;
+      proj(a, (ad,an,aa))       = (unit,unit,aa);
+      forall ad: attribut, an: attribut, aa: attribut;
+      proj((d,n), (ad,an,aa))   = (ad,an,unit);
+      forall ad: attribut, an: attribut, aa: attribut;
+      proj((d,a), (ad,an,aa))   = (ad,unit,aa);
+      forall ad: attribut, an: attribut, aa: attribut;
+      proj((n,a), (ad,an,aa))   = (unit,an,aa);
+      forall ad: attribut, an: attribut, aa: attribut;
+      proj((d,n,a), (ad,an,aa)) = (ad,an,aa).
+
+(*
+Selections:
+- Selection never changes the schema.
+- Simple selection is applicable on a brut attribute only.
+*)
+reduc forall ad: attribut, an: attribut, aa: attribut;
+      select((), (ad,an,aa))                     = (ad,an,aa);
+      forall an: attribut, aa: attribut;
+      select(d, (brut(d),an,aa))                 = (brut(d), an, aa);
+      forall ad: attribut, aa: attribut;
+      select(n, (ad,brut(n),aa))                 = (ad,brut(n),aa);
+      forall ad: attribut, an: attribut;
+      select(a, (ad,an,brut(a)))                 = (ad,an,brut(a));
+      forall aa: attribut;
+      select((d,n), (brut(d),brut(n),aa))        = (brut(d),brut(n),aa);
+      forall an: attribut;
+      select((d,a), (brut(d),an,brut(a)))        = (brut(d),an,brut(a));
+      forall ad: attribut;
+      select((n,a), (ad,brut(n),brut(a)))        = (ad,brut(n),brut(a));
+      select((d,n,a), (brut(d),brut(n),brut(a))) = (brut(d),brut(n),brut(a)).
+
+(* Selection on symmetric encryption *)
+reduc forall ad: attribut, an: attribut, aa: attribut;
+      selectAES((), (ad,an,aa))                           = (ad,an,aa);
+      forall an: attribut, aa: attribut, k: key;
+      selectAES(d, (senc(d,k),an,aa))                     =
+          (senc(d,k), an, aa);
+      forall ad: attribut, aa: attribut, k: key;
+      selectAES(n, (ad,senc(n,k),aa))                     =
+          (ad,senc(n,k),aa);
+      forall ad: attribut, an: attribut, k: key;
+      selectAES(a, (ad,an,senc(a,k)))                     =
+          (ad,an,senc(a,k));
+      forall aa: attribut, k: key;
+      selectAES((d,n), (senc(d,k),senc(n,k),aa))          =
+          (senc(d,k),senc(n,k),aa);
+      forall an: attribut, k: key;
+      selectAES((d,a), (senc(d,k),an,senc(a,k)))          =
+          (senc(d,k),an,senc(a,k));
+      forall ad: attribut, k: key;
+      selectAES((n,a), (ad,senc(n,k),senc(a,k)))          =
+          (ad,senc(n,k),senc(a,k));
+      forall k: key;
+      selectAES((d,n,a), (senc(d,k),senc(n,k),senc(a,k))) =
+          (senc(d,k),senc(n,k),senc(a,k)).
+
+(*
+Count:
+- Simple count is applicable on a brut attribute only.
+- Attributes outside count are now unit, except for
+  count(d,n,a) which encode the COUNT\(*\).
+*)
+reduc forall an: attribut, aa: attribut;
+      count(d, (brut(d),an,aa))                 = (brut(d), unit, unit);
+      forall ad: attribut, aa: attribut;
+      count(n, (ad,brut(n),aa))                 = (unit,brut(n),unit);
+      forall ad: attribut, an: attribut;
+      count(a, (ad,an,brut(a)))                 = (unit,unit,brut(a));
+      forall aa: attribut;
+      count((d,n), (brut(d),brut(n),aa))        = (brut(d),brut(n),unit);
+      forall an: attribut;
+      count((d,a), (brut(d),an,brut(a)))        = (brut(d),unit,brut(a));
+      forall ad: attribut;
+      count((n,a), (ad,brut(n),brut(a)))        = (unit,brut(n),brut(a));
+      count((d,n,a), (brut(d),brut(n),brut(a))) = (unit,unit,unit).
+
+(* Count on symmetric encryption *)
+reduc forall an: attribut, aa: attribut, k: key;
+      countAES(d, (senc(d,k),an,aa))                     =
+          (senc(d,k), unit, unit);
+      forall ad: attribut, aa: attribut, k: key;
+      countAES(n, (ad,senc(n,k),aa))                     =
+          (unit,senc(n,k),unit);
+      forall ad: attribut, an: attribut, k: key;
+      countAES(a, (ad,an,senc(a,k)))                     =
+          (unit,unit,senc(a,k));
+      forall aa: attribut, k: key;
+      countAES((d,n), (senc(d,k),senc(n,k),aa))          =
+          (senc(d,k),senc(n,k),unit);
+      forall an: attribut, k: key;
+      countAES((d,a), (senc(d,k),an,senc(a,k)))          =
+          (senc(d,k),unit,senc(a,k));
+      forall ad: attribut, k: key;
+      countAES((n,a), (ad,senc(n,k),senc(a,k)))          =
+          (unit,senc(n,k),senc(a,k));
+      forall k: key;
+      countAES((d,n,a), (senc(d,k),senc(n,k),senc(a,k))) = (unit,unit,unit).
+
+
+(* The Calendar application without protection *)
+
+(* ----------------------------------------------- Relation schemas *)
+const aliceKey: key [private].
+
+letfun leSchemaD = (unit, senc(n,aliceKey), brut(a)).
+letfun leSchemaG = (brut(d), unit, unit).
+
+(* ----------------------------------------- Right fragment Process *)
+(* The [adresse] request on right fragment:
+   The channel contains the response channel. *)
+free adressesDUrl: channel.
+let AdressesD =
+  in (adressesDUrl, to: channel);
+  out(to, proj((n,a), leSchemaD())).
+  (* 0. *)
+
+(* The #rendezvous request:
+   The channel contains the response channel. *)
+free rendezvousDUrl: channel.
+let RendezvousD =
+  in(rendezvousDUrl, to: channel);
+  out(to, proj((), select(a, selectAES(n, leSchemaD())))).
+  (* 0. *)
+
+(* The fragment puts all request in parallel. *)
+let FragD = !AdressesD | !RendezvousD.
+
+(* ------------------------------------------ Left fragment Process *)
+(* The [adresse] request on left fragment:
+   The channel contains the response channel. *)
+free adressesGUrl: channel.
+let AdressesG =
+  in (adressesGUrl, to: channel);
+  out(to, proj((), leSchemaG())).
+  (* 0. *)
+
+(* The #rendezvous request on left fragment:
+   The channel contains ids and the response channel. *)
+free rendezvousGUrl: channel.
+let RendezvousG =
+  in(rendezvousGUrl, (ids: bitstring, to: channel));
+  out(to, count(d, proj(d, select(d, leSchemaG())))).
+  (* 0. *)
+
+(* The fragment puts all request in parallel. *)
+let FragG = !AdressesG | !RendezvousG.
+
+(* ----------------------------------------------- Calendar Process *)
+free toAgenda: channel.
+free toAlice: channel.
+let Agenda =
+  (* Calls of [adresse] request:
+     The =sdec= & =defrag= doesn't appear since it occurs at Alice side *)
+  !(out(adressesDUrl, toAlice) | out(adressesGUrl, toAlice)) |
+  (* Calls of #rendezvous request
+     This one uses a sequential strategy *)
+  !(out(rendezvousDUrl, toAgenda);
+    in(toAgenda, ids: bitstring);
+    out(rendezvousGUrl, (ids, toAlice))).
+
+(* --------------------------------------------------- Main Process *)
+(* Put all things together *)
+process !FragD | !FragG | !Agenda

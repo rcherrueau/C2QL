@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Personal Calendar with Asymetric Encryption</title>
+
+        <!-- benchmarkjs -->
+        <script type="text/javascript" src="lib/lodash/lodash.js"></script>
+        <script type="text/javascript" src="lib/platform.js/platform.js"></script>
+        <script type="text/javascript" src="lib/benchmark/benchmark.js"></script>
+        <!-- Web Crypto -->
+        <script type="text/javascript" src="lib/unibabel/index.js"></script>
+        <script type="text/javascript" src="lib/unibabel/unibabel.hex.js"></script>
+        <!-- Calendar -->
+        <script type="text/javascript" src="calendar-cli.js"></script>
+    </head>
+    <body>
+        <p>
+        Open the <code>console</code> and look at the log to see the
+        advancement...
+        <button id="benches-start">Start</button>
+        </p>
+        <pre><code id="benches-res"></code></pre>
+    </body>
+</html>

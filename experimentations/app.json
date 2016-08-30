@@ -1,0 +1,5 @@
+{
+  "name": "calendar-exp",
+  "description": "The Online Personal Calendar Experiments",
+  "keywords": ["node", "express", "static"]
+}

@@ -1,0 +1,88 @@
+#+TITLE: Analyzing Compositions of Cryptographic and
+#+TITLE: Fragmentation Techniques for Privacy Constraints
+#+AUTHOR: Ronan-Alexandre Cherrueau
+#+EMAIL: Ronan-Alexandre.Cherrueau@inria.fr
+
+/keywords: Privacy-preserving application, Privacy constraints
+verification, Model checking, ProVerif, Encryption, Fragmentation./
+
+Privacy-preserving application takes users' informational privacy into
+account during its development. Concretely, a privacy-preserving
+application harness techniques that enables privacy to be
+strengthened, such as encryption and fragmentation.
+
+Developing a complex privacy-preserving application generally involves
+the composition of different privacy techniques. However, each
+technique is a complex system and composing them results in an
+over-complex application. Therefore, it is harder for the developer to
+be confident that the application protects privacy correctly.
+
+This work presents an approach for the analyzing of the preservation
+of privacy properties in complex privacy-preserving applications,
+especially, applications made of the composition of cryptographic and
+fragmentation techniques. Our approach provides an automatic
+verification for such applications and a modelization into the
+[[http://prosecco.gforge.inria.fr/personal/bblanche/proverif/][ProVerif]] model checker.
+
+** Personal Online Calendar
+This repository provides three examples of our encoding in ProVerif.
+All of this three examples are based on a common privacy-preserving
+application: Alice's personal online calendar. Briefly, the personal
+calendar stores meetings as a triplet /(date,name,address)/ that
+represents the meeting date, the name of the contact and the meeting
+location. The programmer of the personal calendar also adopts two
+privacy constraints defining which information is sensitive and
+should, therefor, be kept confidential:
+- /{date,address}/ :: An attacker cannot locate Alice by
+     associating an address to a meeting date.
+- /{name}/         :: An attacker cannot infer the name of
+     Alice's contacts.
+
+** ProVerif Encoding
+From a bird eye's view our approach to the verification of privacy
+works as follows: fragmentation and encryption, together with privacy
+constraints are defined over the type of the database (its schema).
+Fragmentation and encryption of an attribute change the type of the
+database and exhibit which attributes are readable or not, while
+privacy constraints indicate explicitly which compositions of
+attributes are unsafe to read. We then encode the corresponding
+database schema and privacy constraints in ProVerif. Queries and query
+programs over such databases are systematically transformed into
+ProVerif, such that ProVerif can be used to verify the privacy
+constraints over the query programs.
+
+** Checking Examples
+All examples have been developed and tested under ProVerif 1.9. You
+can get ProVerif from the [[http://prosecco.gforge.inria.fr/personal/bblanche/proverif/][ProVerif page]], or, if you are on a Mac, from
+homebrew/science repository.
+
+Get examples with:
+#+BEGIN_SRC sh
+$ git clone git@github.com:rcherrueau/C2QL.git
+$ cd C2QL/privacy-checker
+#+END_SRC
+
+And check an example with:
+#+BEGIN_SRC sh
+$ proverif <example_name>.pv
+#+END_SRC
+
+Each example contains a description and an explication of the output.
+
+** License
+Copyright (C) 2016 Ronan-Alexandre Cherrueau
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or (at
+your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+02110-1301 USA.

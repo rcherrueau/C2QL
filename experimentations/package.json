@@ -1,0 +1,20 @@
+{
+  "name": "calendar",
+  "version": "0.0.1",
+  "description": "The Online Personal Calendar with Differents Protection Mechanismes",
+  "main": "calendar-saas.js",
+  "scripts": {
+    "start": "node calendar-saas.js"
+  },
+  "dependencies": {
+    "connect-timeout": "^1.7.0",
+    "express": "^4.13.3",
+    "lazy.js": "^0.4.2",
+    "pg": "^4.5.2"
+  },
+  "engines": {
+    "node": "4.0.0"
+  },
+  "author": "Ronan-A. Cherrueau",
+  "license": "GPL-2.0"
+}
