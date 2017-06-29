@@ -139,22 +139,21 @@ namespace query
   ||| ADT for the predicate of a σ in the relational algebra.
   |||
   ||| @ Δ  the schema over which this predicate is tested.
-  ||| @ ty the attribute type produces by this predicate.
   |||
   ||| You should use the sugar accessor rather than this constructor.
   ||| Inside the repl `:browse Privy.sugar`
-  data Pred : (Δ : Schema) -> (ty : Ty) -> Type where
+  data Pred : (Δ : Schema) -> Type where
     ||| Logical AND
-    AND      : Pred Δ BOOL -> Pred Δ BOOL -> Pred Δ BOOL
+    AND      : Pred Δ -> Pred Δ -> Pred Δ
     ||| Logical OR
-    OR       : Pred Δ BOOL -> Pred Δ BOOL -> Pred Δ BOOL
+    OR       : Pred Δ  -> Pred Δ  -> Pred Δ
     ||| Test that values of `a` contains `pat`.
     |||
     ||| @ p proof that `a` is an attribute of `Δ`.
     Like     : (a : Attribute) -> (pat : String) ->
                {auto p : Elem a Δ} ->
                -- Like (snd a) => -- to add the like interface
-               Pred Δ BOOL
+               Pred Δ
     ||| Test that values of `a` are a next week date.
     |||
     ||| @ p1 proof that `a` is a `DATE`.
@@ -162,7 +161,7 @@ namespace query
     NextWeek : (a : Attribute) ->
                {default Refl p1 : DATE = (snd a)} ->
                {auto p2 : Elem a Δ} ->
-               Pred Δ BOOL
+               Pred Δ
     ||| Test that values of `a` are equals to `v`.
     |||
     ||| @ v a value with the idris type of `a`.
@@ -172,7 +171,7 @@ namespace query
                Equal (snd a) => -- Note the presence of our interface
                Eq (interpTy (snd a))   => -- For debugging only,
                Show (interpTy (snd a)) => -- not required
-               Pred Δ BOOL
+               Pred Δ
 
   mutual
     -- TODO: remove me. to only export definition. Then give access to
@@ -208,7 +207,7 @@ namespace query
       ||| σ term.
       |||
       ||| Specifies a filter on a specific predicate `p`.
-      Select  : (p : Pred Δ BOOL) -> Query Δ -> Query Δ
+      Select  : (p : Pred Δ) -> Query Δ -> Query Δ
       ||| decrypt term.
       |||
       ||| @ p1 proof that value of `a` are encrypted with `c`.
@@ -367,15 +366,15 @@ namespace sugar
   ---------------------------------------------------- Predicate sugar
   -- export
   like : (a : Attribute) -> String -> {auto p : Elem a Δ} ->
-         Pred Δ BOOL
+         Pred Δ
   like = Like
 
   -- export
-  (&&) : Pred Δ BOOL -> Pred Δ BOOL -> Pred Δ BOOL
+  (&&) : Pred Δ -> Pred Δ -> Pred Δ
   (&&) = AND
 
   -- export
-  (||) : Pred Δ BOOL -> Pred Δ BOOL -> Pred Δ BOOL
+  (||) : Pred Δ -> Pred Δ -> Pred Δ
   (||) = OR
 
   -- export
@@ -384,12 +383,12 @@ namespace sugar
          Equal (snd a) =>
          Eq (interpTy (snd a))   =>
          Show (interpTy (snd a)) =>
-         Pred Δ BOOL
+         Pred Δ
   (==) = Equal
 
   -- export
   nextWeek : (a : Attribute) -> {default Refl p1 : DATE = (snd a)} ->
-             {auto p2 : Elem a Δ} -> Pred Δ BOOL
+             {auto p2 : Elem a Δ} -> Pred Δ
   nextWeek = NextWeek
 
   -------------------------------------------------------- Query sugar
@@ -403,7 +402,7 @@ namespace sugar
   count = Count
 
   -- export
-  σ : Pred Δ BOOL -> Query Δ' ->
+  σ : Pred Δ -> Query Δ' ->
       -- XXX: Instruct the unifyier to infer the Δ from Δ'
       {default Refl p : Δ = Δ'} -> Query Δ
   σ f q {p=Refl} = Select f q
@@ -475,12 +474,14 @@ sameEnv : SafeRendezVousEnv = SafeRendezVousEnv'
 sameEnv = Refl
 
 -- -- ill-typed:
--- FalseEnv1 : Env 3
+-- FalseEnv1 : Env 2
 -- FalseEnv1 = fragEnv [D] $ fragEnv [D] RendezVousEnv
 
 -- -- ill-typed:
--- FalseEnv2 : Env 2
--- FalseEnv2 = cryptEnv 0 AES N $ fragEnv [D] RendezVousEnv
+-- F : Attribute
+-- F = ("NotInEnv", TEXT)
+-- FalseEnv2 : Env 1
+-- FalseEnv2 = cryptEnv AES F $ fragEnv [D] RendezVousEnv
 
 
 -- The bottom Query type
